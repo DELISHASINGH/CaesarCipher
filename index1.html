@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Consent Keystroke Recorder (Learning)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Arial; max-width:900px; margin:24px auto; padding:0 16px; }
+    h1 { font-size:20px; margin-bottom:8px; }
+    .controls { display:flex; gap:8px; margin-bottom:12px; align-items:center; }
+    button { padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; }
+    .log { white-space:pre-wrap; background:#fafafa; border:1px solid #eee; padding:12px; min-height:200px; overflow:auto; border-radius:6px; }
+    .meta { color:#555; font-size:13px; margin-bottom:8px; }
+    label { display:block; margin-bottom:6px; font-weight:600; }
+    .danger { color:crimson; font-weight:700; }
+  </style>
+</head>
+<body>
+  <h1>Consent Keystroke Recorder — Learning Tool</h1>
+  <p class="meta">This page records key events only while you press <strong>Start recording</strong>. It does NOT run in background or collect data when the page is closed. Do not type passwords or sensitive info here.</p>
+
+  <div class="controls" role="region" aria-label="controls">
+    <button id="startBtn">Start recording</button>
+    <button id="stopBtn" disabled>Stop recording</button>
+    <button id="clearBtn">Clear log</button>
+    <button id="downloadBtn">Download log</button>
+  </div>
+
+  <label for="notes">Notes / Focus area (optional)</label>
+  <input id="notes" placeholder="Add context about this session (optional)" style="width:100%; padding:8px; margin-bottom:10px;">
+
+  <div class="log" id="log" aria-live="polite" tabindex="0"></div>
+
+  <script>
+    // Keep things explicit: we only listen while recording = true
+    let recording = false;
+    const logEl = document.getElementById('log');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const notesInput = document.getElementById('notes');
+
+    // store entries in memory (local to page)
+    const entries = [];
+
+    function appendToLog(text) {
+      const t = document.createElement('div');
+      t.textContent = text;
+      logEl.appendChild(t);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function formatEvent(e) {
+      // timestamp, key, code, altKey/metaKey/ctrlKey/shiftKey
+      const time = new Date().toISOString();
+      const flags = [
+        e.ctrlKey ? 'Ctrl' : '',
+        e.shiftKey ? 'Shift' : '',
+        e.altKey ? 'Alt' : '',
+        e.metaKey ? 'Meta' : ''
+      ].filter(Boolean).join('+');
+      const flagPart = flags ? ` [${flags}]` : '';
+      // Represent printable keys plainly, others by name
+      return `${time} — key="${e.key}" code="${e.code}"${flagPart}`;
+    }
+
+    function keyHandler(e) {
+      if (!recording) return;
+      // Optionally filter out "sensitive" keys
+      // Example: ignore keys when user is holding modifier alone or
+      // you can ignore 'Enter' or 'Backspace' if you want.
+      const row = formatEvent(e);
+      entries.push(row);
+      appendToLog(row);
+    }
+
+    // Start / stop logic
+    startBtn.addEventListener('click', () => {
+      if (recording) return;
+      recording = true;
+      entries.length = 0; // start fresh by default; remove if you want to keep previous
+      logEl.innerHTML = ''; // show user it's fresh
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      appendToLog('--- Recording started. Focus this tab and type. ---');
+      // Add global listener while page is focused
+      window.addEventListener('keydown', keyHandler);
+      // Accessibility: focus log so user sees updates
+      logEl.focus();
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (!recording) return;
+      recording = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      window.removeEventListener('keydown', keyHandler);
+      appendToLog('--- Recording stopped. ---');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      entries.length = 0;
+      logEl.innerHTML = '';
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      // Prepare content, include optional notes and a header
+      const header = [
+        'Consent Keystroke Recorder — session export',
+        `Export time: ${new Date().toISOString()}`,
+        `Notes: ${notesInput.value || '[none]'}`,
+        '---',
+        ''
+      ].join('\n');
+      const body = entries.join('\n');
+      const content = header + body;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `keystroke_log_${new Date().toISOString().replace(/[:.]/g,'-')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    // Optional: warn if user tries to close while recording
+    window.addEventListener('beforeunload', (ev) => {
+      if (recording) {
+        ev.preventDefault();
+        ev.returnValue = '';
+      }
+    });
+  </script>
+</body>
+</html>
