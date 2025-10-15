@@ -32,7 +32,6 @@
   <div class="log" id="log" aria-live="polite" tabindex="0"></div>
 
   <script>
-    // Keep things explicit: we only listen while recording = true
     let recording = false;
     const logEl = document.getElementById('log');
     const startBtn = document.getElementById('startBtn');
@@ -40,8 +39,6 @@
     const clearBtn = document.getElementById('clearBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const notesInput = document.getElementById('notes');
-
-    // store entries in memory (local to page)
     const entries = [];
 
     function appendToLog(text) {
@@ -52,7 +49,6 @@
     }
 
     function formatEvent(e) {
-      // timestamp, key, code, altKey/metaKey/ctrlKey/shiftKey
       const time = new Date().toISOString();
       const flags = [
         e.ctrlKey ? 'Ctrl' : '',
@@ -61,7 +57,7 @@
         e.metaKey ? 'Meta' : ''
       ].filter(Boolean).join('+');
       const flagPart = flags ? ` [${flags}]` : '';
-      // Represent printable keys plainly, others by name
+      
       return `${time} — key="${e.key}" code="${e.code}"${flagPart}`;
     }
 
@@ -75,18 +71,18 @@
       appendToLog(row);
     }
 
-    // Start / stop logic
+  
     startBtn.addEventListener('click', () => {
       if (recording) return;
       recording = true;
-      entries.length = 0; // start fresh by default; remove if you want to keep previous
-      logEl.innerHTML = ''; // show user it's fresh
+      entries.length = 0; 
+      logEl.innerHTML = ''; 
       startBtn.disabled = true;
       stopBtn.disabled = false;
       appendToLog('--- Recording started. Focus this tab and type. ---');
-      // Add global listener while page is focused
+      
       window.addEventListener('keydown', keyHandler);
-      // Accessibility: focus log so user sees updates
+      
       logEl.focus();
     });
 
@@ -105,7 +101,7 @@
     });
 
     downloadBtn.addEventListener('click', () => {
-      // Prepare content, include optional notes and a header
+     
       const header = [
         'Consent Keystroke Recorder — session export',
         `Export time: ${new Date().toISOString()}`,
@@ -126,7 +122,6 @@
       URL.revokeObjectURL(url);
     });
 
-    // Optional: warn if user tries to close while recording
     window.addEventListener('beforeunload', (ev) => {
       if (recording) {
         ev.preventDefault();
@@ -136,3 +131,4 @@
   </script>
 </body>
 </html>
+
